@@ -17,7 +17,6 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          # Устанавливаем 32-битные библиотеки и OpenJDK 11 вместо 17
           sudo apt install -y python3 python3-pip git build-essential \
             openjdk-11-jdk unzip zip libffi-dev libssl-dev liblzma-dev zlib1g-dev \
             libsqlite3-dev libjpeg-dev libfreetype6-dev pkg-config wget curl \
@@ -25,14 +24,20 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython
 
-      # 3. Инициализация buildozer.spec и установка уровня логирования
-      - name: Prepare buildozer.spec and set log level
+      # 3. Инициализация buildozer.spec и настройка сборки
+      - name: Prepare buildozer.spec and configure build
         run: |
           buildozer init
           # Добавляем kivy в зависимости
           sed -i 's/requirements = python3/requirements = python3,kivy/g' buildozer.spec
           # Устанавливаем подробный уровень логирования
           sed -i 's/#log_level = 2/log_level = 2/g' buildozer.spec
+          # Явно указываем рекомендуемую версию NDK
+          sed -i 's/#android.ndk_version = r25b/android.ndk_version = r25b/g' buildozer.spec
+          # Явно указываем версию Build Tools
+          echo "android.build_tools_version = 31.0.0" >> buildozer.spec
+          # Используем ветку develop для python-for-android
+          echo "p4a.branch = develop" >> buildozer.spec
 
       # 4. Устанавливаем Android SDK
       - name: Install Android SDK
@@ -58,34 +63,23 @@ jobs:
       # 5. Принимаем лицензии, устанавливаем компоненты и создаем символическую ссылку
       - name: Accept licenses and create symlink
         run: |
-          # Принимаем лицензии (sdkmanager теперь доступен в PATH)
           yes | sdkmanager --licenses
-          
-          # Устанавливаем необходимые компоненты SDK
           sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0"
-
-          # Создаем символическую ссылку для buildozer, чтобы он нашел инструменты
           ln -s $ANDROID_SDK_ROOT/cmdline-tools/latest $ANDROID_SDK_ROOT/tools
 
-      # 6. Обновляем python-for-android
-      - name: Clone latest python-for-android
-        run: |
-          rm -rf .buildozer/android/platform/python-for-android
-          git clone https://github.com/kivy/python-for-android.git .buildozer/android/platform/python-for-android
-
-      # 7. Сборка APK
+      # 6. Сборка APK
       - name: Build APK
         run: |
           # Очищаем системные переменные Android, чтобы избежать конфликтов
           unset ANDROID_HOME || true
           unset ANDROID_NDK_HOME || true
-          # Запускаем сборку (уровень логирования теперь задан в buildozer.spec)
+          # Запускаем сборку (вся конфигурация в buildozer.spec)
           buildozer android debug
         env:
           # Явно указываем путь к Java 11 для buildozer
           JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
 
-      # 8. Загружаем APK как артефакт
+      # 7. Загружаем APK как артефакт
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
