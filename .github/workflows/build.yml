@@ -6,7 +6,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Используем более стабильную и проверенную версию Ubuntu
+    runs-on: ubuntu-22.04
 
     steps:
       # 1. Checkout проекта
