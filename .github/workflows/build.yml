@@ -14,7 +14,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # 2. Устанавливаем зависимости (Java 11 и 32-битные библиотеки)
+      # 2. Устанавливаем зависимости (с фиксированной версией Cython)
       - name: Install dependencies
         run: |
           sudo apt update
@@ -23,7 +23,8 @@ jobs:
             libsqlite3-dev libjpeg-dev libfreetype6-dev pkg-config wget curl \
             lib32stdc++6 lib32z1
           pip install --upgrade pip
-          pip install buildozer cython
+          # Устанавливаем Cython версии < 3.0 для совместимости с jnius
+          pip install buildozer 'cython<3.0'
 
       # 3. Инициализация buildozer.spec и настройка сборки
       - name: Prepare buildozer.spec and configure build
