@@ -43,8 +43,6 @@ jobs:
           sed -i 's/#android.permissions = INTERNET/android.permissions = INTERNET,ACCESS_NETWORK_STATE/g' buildozer.spec
           # Явно указываем версию Build Tools
           echo "android.build_tools_version = 31.0.0" >> buildozer.spec
-          # Используем ветку develop для python-for-android
-          echo "p4a.branch = develop" >> buildozer.spec
 
       # 4. Устанавливаем Android SDK
       - name: Install Android SDK
@@ -60,7 +58,7 @@ jobs:
           # Создаем требуемую структуру директорий: <sdk>/cmdline-tools/latest
           mv cmdline-tools temp-tools
           mkdir cmdline-tools
-          mv temp-tools cmdline-tools/latest
+          mv temp-tools cmdline-tools/
 
           # Добавляем пути SDK в окружение для СЛЕДУЮЩИХ шагов
           echo "$SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
