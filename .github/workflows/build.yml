@@ -7,12 +7,67 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
 
-      - name: Run Buildozer
-        uses: kivy/buildozer-action@v2
+    steps:
+      # 1. Checkout проекта
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # 2. Устанавливаем зависимости Linux и Python
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y python3 python3-pip git build-essential \
+            openjdk-17-jdk unzip zip libffi-dev libssl-dev liblzma-dev zlib1g-dev \
+            libsqlite3-dev libjpeg-dev libfreetype6-dev pkg-config wget curl
+          pip install --upgrade pip
+          pip install buildozer cython
+
+      # 3. Инициализация buildozer.spec
+      - name: Prepare buildozer.spec
+        run: |
+          buildozer init
+          sed -i 's/requirements = python3/requirements = python3,kivy/g' buildozer.spec
+
+      # 4. Скачиваем Android cmdline-tools
+      - name: Install Android cmdline-tools
+        run: |
+          mkdir -p $HOME/.buildozer/android/platform/android-sdk/cmdline-tools
+          cd $HOME/.buildozer/android/platform/android-sdk/cmdline-tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip
+          mv cmdline-tools latest
+          rm cmdline-tools.zip
+
+      # 5. Принимаем лицензии
+      - name: Accept Android SDK licenses
+        run: |
+          mkdir -p $HOME/.buildozer/android/platform/android-sdk/licenses
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
+
+      # 6. Обновляем python-for-android
+      - name: Clone latest python-for-android
+        run: |
+          rm -rf .buildozer/android/platform/python-for-android
+          git clone https://github.com/kivy/python-for-android.git .buildozer/android/platform/python-for-android
+
+      # 7. Устанавливаем переменные окружения для Buildozer
+      - name: Set environment variables
+        run: |
+          export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
+          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
+          echo "export ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:\$PATH" >> $GITHUB_ENV
+
+      # 8. Сборка APK
+      - name: Build APK
+        run: |
+          buildozer android debug
+
+      # 9. Загружаем APK как артефакт
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          python-version: 3.11
-          requirements: python3,kivy
-          target: android
+          name: apk
+          path: bin/*.apk
