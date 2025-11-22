@@ -32,29 +32,30 @@ jobs:
       # 4. Устанавливаем и настраиваем Android SDK
       - name: Install and set up Android SDK
         run: |
-          # Определяем корень SDK и создаем директорию
+          # Определяем корень SDK и добавляем в переменные окружения для будущих шагов
           SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-          mkdir -p $SDK_ROOT
           echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> $GITHUB_ENV
 
-          # Скачиваем и размещаем command-line tools в правильной структуре
+          # Скачиваем и распаковываем command-line tools в правильную структуру: <sdk_root>/cmdline-tools/latest
+          mkdir -p $SDK_ROOT/cmdline-tools
           cd $SDK_ROOT
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d cmdline-tools
           rm cmdline-tools.zip
-          mv cmdline-tools latest
-          mkdir cmdline-tools
-          mv latest cmdline-tools/
-          
-          # Добавляем инструменты SDK в PATH для текущего и последующих шагов
+          mv cmdline-tools/cmdline-tools cmdline-tools/latest
+
+          # Определяем полный путь к sdkmanager
+          SDKMANAGER=$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager
+
+          # Добавляем пути к инструментам в GITHUB_PATH для последующих шагов
           echo "$SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
           echo "$SDK_ROOT/platform-tools" >> $GITHUB_PATH
           
-          # Принимаем лицензии и устанавливаем необходимые компоненты
-          yes | sdkmanager --licenses --sdk_root=$SDK_ROOT
-          sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0" --sdk_root=$SDK_ROOT
+          # Принимаем лицензии и устанавливаем компоненты, используя ПОЛНЫЙ ПУТЬ к sdkmanager
+          yes | $SDKMANAGER --licenses --sdk_root=$SDK_ROOT
+          $SDKMANAGER "platform-tools" "platforms;android-31" "build-tools;31.0.0" --sdk_root=$SDK_ROOT
 
-          # Создаем символическую ссылку, чтобы buildozer нашел инструменты
+          # Создаем символическую ссылку, чтобы buildozer нашел инструменты по старому пути
           ln -s $SDK_ROOT/cmdline-tools/latest $SDK_ROOT/tools
 
       # 5. Обновляем python-for-android
