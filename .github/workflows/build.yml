@@ -47,30 +47,28 @@ jobs:
       # 4. Устанавливаем и настраиваем Android SDK
       - name: Install and set up Android SDK
         run: |
-          # Определяем корень SDK и создаем директорию
           SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-          mkdir -p $SDK_ROOT
-          
-          # Скачиваем и размещаем command-line tools в правильной структуре
+          mkdir -p $SDK_ROOT/cmdline-tools
           cd $SDK_ROOT
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip
-          rm cmdline-tools.zip
-          mv cmdline-tools temp-tools
-          mkdir cmdline-tools
-          mv temp-tools cmdline-tools/latest
 
-          # Добавляем пути SDK в окружение для этого и последующих шагов
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d cmdline-tools
+          rm cmdline-tools.zip
+          mv cmdline-tools/cmdline-tools cmdline-tools/latest
+
+          # Определяем АБСОЛЮТНЫЙ путь к sdkmanager
+          SDKMANAGER=$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager
+
+          # Добавляем пути в окружение для ПОСЛЕДУЮЩИХ шагов
           echo "$SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
           echo "$SDK_ROOT/platform-tools" >> $GITHUB_PATH
           echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> $GITHUB_ENV
-          export PATH=$SDK_ROOT/cmdline-tools/latest/bin:$SDK_ROOT/platform-tools:$PATH
           
-          # Принимаем лицензии и устанавливаем необходимые компоненты
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0"
+          # Используем АБСОЛЮТНЫЙ путь для вызова sdkmanager
+          yes | $SDKMANAGER --licenses
+          $SDKMANAGER "platform-tools" "platforms;android-31" "build-tools;31.0.0"
 
-          # Создаем символическую ссылку, чтобы buildozer нашел инструменты
+          # Создаем символическую ссылку для buildozer
           ln -s $SDK_ROOT/cmdline-tools/latest $SDK_ROOT/tools
 
       # 5. Сборка APK
