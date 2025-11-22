@@ -29,43 +29,46 @@ jobs:
           buildozer init
           sed -i 's/requirements = python3/requirements = python3,kivy/g' buildozer.spec
 
-      # 4. Устанавливаем Android SDK command-line tools
-      - name: Install Android SDK
+      # 4. Устанавливаем и настраиваем Android SDK
+      - name: Install and set up Android SDK
         run: |
+          # Определяем корень SDK и создаем директорию
           SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
           mkdir -p $SDK_ROOT
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> $GITHUB_ENV
+
+          # Скачиваем и размещаем command-line tools в правильной структуре
           cd $SDK_ROOT
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip
-          # Распаковывается в 'cmdline-tools'. Buildozer ищет в 'tools'.
-          mv cmdline-tools tools
+          unzip -q cmdline-tools.zip
           rm cmdline-tools.zip
-
-      # 5. Устанавливаем переменные окружения и принимаем лицензии
-      - name: Set up Android SDK environment and accept licenses
-        run: |
-          SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> $GITHUB_ENV
+          mv cmdline-tools latest
+          mkdir cmdline-tools
+          mv latest cmdline-tools/
           
-          # Add SDK tools to path for this step and subsequent steps
-          echo "$SDK_ROOT/tools/bin" >> $GITHUB_PATH
-          export PATH=$SDK_ROOT/tools/bin:$PATH
+          # Добавляем инструменты SDK в PATH для текущего и последующих шагов
+          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$SDK_ROOT/platform-tools" >> $GITHUB_PATH
           
-          # Accept licenses
-          yes | sdkmanager --licenses
+          # Принимаем лицензии и устанавливаем необходимые компоненты
+          yes | sdkmanager --licenses --sdk_root=$SDK_ROOT
+          sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0" --sdk_root=$SDK_ROOT
 
-      # 6. Обновляем python-for-android
+          # Создаем символическую ссылку, чтобы buildozer нашел инструменты
+          ln -s $SDK_ROOT/cmdline-tools/latest $SDK_ROOT/tools
+
+      # 5. Обновляем python-for-android
       - name: Clone latest python-for-android
         run: |
           rm -rf .buildozer/android/platform/python-for-android
           git clone https://github.com/kivy/python-for-android.git .buildozer/android/platform/python-for-android
 
-      # 7. Сборка APK
+      # 6. Сборка APK
       - name: Build APK
         run: |
           buildozer android debug
 
-      # 8. Загружаем APK как артефакт
+      # 7. Загружаем APK как артефакт
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
