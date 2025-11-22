@@ -25,11 +25,14 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython
 
-      # 3. Инициализация buildozer.spec
-      - name: Prepare buildozer.spec
+      # 3. Инициализация buildozer.spec и установка уровня логирования
+      - name: Prepare buildozer.spec and set log level
         run: |
           buildozer init
+          # Добавляем kivy в зависимости
           sed -i 's/requirements = python3/requirements = python3,kivy/g' buildozer.spec
+          # Устанавливаем подробный уровень логирования
+          sed -i 's/#log_level = 2/log_level = 2/g' buildozer.spec
 
       # 4. Устанавливаем Android SDK
       - name: Install Android SDK
@@ -76,8 +79,8 @@ jobs:
           # Очищаем системные переменные Android, чтобы избежать конфликтов
           unset ANDROID_HOME || true
           unset ANDROID_NDK_HOME || true
-          # Запускаем сборку с подробным логированием
-          buildozer --log_level 2 android debug
+          # Запускаем сборку (уровень логирования теперь задан в buildozer.spec)
+          buildozer android debug
         env:
           # Явно указываем путь к Java 11 для buildozer
           JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
