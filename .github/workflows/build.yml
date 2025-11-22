@@ -14,12 +14,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # 2. Устанавливаем зависимости (с фиксированной версией Cython)
+      # 2. Устанавливаем зависимости (Java 17 и фиксированная версия Cython)
       - name: Install dependencies
         run: |
           sudo apt update
+          # Устанавливаем OpenJDK 17, так как этого требует Android Gradle Plugin
           sudo apt install -y python3 python3-pip git build-essential \
-            openjdk-11-jdk unzip zip libffi-dev libssl-dev liblzma-dev zlib1g-dev \
+            openjdk-17-jdk unzip zip libffi-dev libssl-dev liblzma-dev zlib1g-dev \
             libsqlite3-dev libjpeg-dev libfreetype6-dev pkg-config wget curl \
             lib32stdc++6 lib32z1
           pip install --upgrade pip
@@ -78,8 +79,8 @@ jobs:
           # Запускаем сборку (вся конфигурация в buildozer.spec)
           buildozer android debug
         env:
-          # Явно указываем путь к Java 11 для buildozer
-          JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+          # Явно указываем путь к Java 17 для Gradle
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
 
       # 7. Загружаем APK как артефакт
       - name: Upload APK
