@@ -9,9 +9,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Скачиваем проект
       - name: Checkout
         uses: actions/checkout@v3
 
+      # 2. Устанавливаем зависимости Linux и Python
       - name: Install dependencies
         run: |
           sudo apt update
@@ -21,12 +23,13 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython
 
+      # 3. Инициализация buildozer и установка Kivy
       - name: Prepare buildozer.spec
         run: |
           buildozer init
           sed -i 's/requirements = python3/requirements = python3,kivy/g' buildozer.spec
 
-      # 1. Устанавливаем Android cmdline-tools
+      # 4. Скачиваем Android cmdline-tools
       - name: Install Android cmdline-tools
         run: |
           mkdir -p $HOME/.buildozer/android/platform/android-sdk/cmdline-tools
@@ -36,21 +39,20 @@ jobs:
           mv cmdline-tools latest
           rm cmdline-tools.zip
 
-      # 2. Принимаем лицензии
+      # 5. Принятие лицензий Android SDK
       - name: Accept Android SDK licenses
         run: |
           mkdir -p $HOME/.buildozer/android/platform/android-sdk/licenses
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
           echo "84831b9409646a918e30573bab4c9c91346d8abd" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
 
-      # 3. Сборка APK
+      # 6. Сборка APK
       - name: Build APK
         run: |
           buildozer android debug
 
-      # 4. Загружаем APK как артефакт
+      # 7. Загружаем APK как артефакт
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: apk
-          path: bin/*.apk
+          name:
