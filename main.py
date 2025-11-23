@@ -343,7 +343,7 @@ class WaitingScreen(Screen):
 class GameScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.game_area = FloatLayout()
+        self.game_area = FloatLayout(size_hint=(1, 1))
         self.ui_area = BoxLayout(size_hint_y=None, height=150, padding=10, spacing=10)
         # Создаем корневой BoxLayout, который будет занимать весь экран
         root_layout = BoxLayout(orientation='vertical', size_hint=(1, 1))
