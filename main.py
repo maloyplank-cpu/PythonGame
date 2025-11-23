@@ -111,10 +111,14 @@ class TowerWidget(Widget):
         self.update_graphics() # Первый вызов для инициализации
 
     def update_graphics(self, *args):
+        # Точечно очищаем и перерисовываем основной холст
         self.canvas.clear()
         with self.canvas:
             Color(*self.tower_color)
             Rectangle(pos=self.pos, size=self.size)
+        # Точечно очищаем и перерисовываем холст "after" для HP бара
+        self.canvas.after.clear()
+        with self.canvas.after:
             hp_bar_y = self.top + 5
             Color(*HP_BAR_BG)
             Rectangle(pos=(self.x, hp_bar_y), size=(self.width, 10))
@@ -145,10 +149,12 @@ class UnitWidget(Widget):
         self.update_graphics()  # Первоначальная отрисовка HP
 
     def update_graphics(self, *args):
+        # Точечно очищаем и перерисовываем основной холст
         self.canvas.clear()
         with self.canvas:
             Color(*self.unit_color)
             Rectangle(pos=self.pos, size=self.size)
+        # Точечно очищаем и перерисовываем холст "after" для HP бара
         self.canvas.after.clear()
         with self.canvas.after:
             hp_bar_y = self.top + 5
@@ -515,6 +521,7 @@ class GameScreen(Screen):
         BOTTOM_MARGIN = 20
         TOP_MARGIN = 20
         SIDE_MARGIN = 40
+        SIDE_TOWER_Y_OFFSET = 80 # Дополнительный отступ для боковых башен
 
         for t in self.towers:
             if t.tower_name == 'enemy_king':
@@ -522,19 +529,19 @@ class GameScreen(Screen):
                 t.pos = (w / 2 - t.width / 2, h - t.height - TOP_MARGIN)
             elif t.tower_name == 'enemy_left':
                 t.size = (TOWER_WIDTH, PRINCESS_TOWER_HEIGHT)
-                t.pos = (SIDE_MARGIN, h - t.height - TOP_MARGIN - 80)
+                t.pos = (SIDE_MARGIN, h - t.height - TOP_MARGIN - SIDE_TOWER_Y_OFFSET)
             elif t.tower_name == 'enemy_right':
                 t.size = (TOWER_WIDTH, PRINCESS_TOWER_HEIGHT)
-                t.pos = (w - t.width - SIDE_MARGIN, h - t.height - TOP_MARGIN - 80)
+                t.pos = (w - t.width - SIDE_MARGIN, h - t.height - TOP_MARGIN - SIDE_TOWER_Y_OFFSET)
             elif t.tower_name == 'player_king':
                 t.size = (TOWER_WIDTH, KING_TOWER_HEIGHT)
                 t.pos = (w / 2 - t.width / 2, BOTTOM_MARGIN)
             elif t.tower_name == 'player_left':
                 t.size = (TOWER_WIDTH, PRINCESS_TOWER_HEIGHT)
-                t.pos = (SIDE_MARGIN, BOTTOM_MARGIN + 80)
+                t.pos = (SIDE_MARGIN, BOTTOM_MARGIN + SIDE_TOWER_Y_OFFSET)
             elif t.tower_name == 'player_right':
                 t.size = (TOWER_WIDTH, PRINCESS_TOWER_HEIGHT)
-                t.pos = (w - t.width - SIDE_MARGIN, BOTTOM_MARGIN + 80)
+                t.pos = (w - t.width - SIDE_MARGIN, BOTTOM_MARGIN + SIDE_TOWER_Y_OFFSET)
 
     def create_ui(self):
         with self.ui_area.canvas.before:
