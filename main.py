@@ -346,7 +346,7 @@ class GameScreen(Screen):
         self.game_area = FloatLayout()
         self.ui_area = BoxLayout(size_hint_y=None, height=150, padding=10, spacing=10)
         # Создаем корневой BoxLayout, который будет занимать весь экран
-        root_layout = BoxLayout(orientation='vertical')
+        root_layout = BoxLayout(orientation='vertical', size_hint=(1, 1))
         # Сначала добавляем игровое поле (оно займет все доступное место)
         root_layout.add_widget(self.game_area)
         # Затем добавляем UI внизу
