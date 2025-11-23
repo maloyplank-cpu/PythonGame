@@ -106,11 +106,13 @@ class TowerWidget(Widget):
         self.max_hp = max_hp
         self.hp = max_hp
         self.tower_color = tower_color
+        # Убираем отрисовку из __init__ и полностью полагаемся на update_graphics
         self.bind(pos=self.update_graphics, size=self.update_graphics)
+        self.update_graphics() # Первый вызов для инициализации
 
     def update_graphics(self, *args):
-        self.canvas.after.clear()
-        with self.canvas.after:
+        self.canvas.clear()
+        with self.canvas:
             Color(*self.tower_color)
             Rectangle(pos=self.pos, size=self.size)
             hp_bar_y = self.top + 5
@@ -138,15 +140,13 @@ class UnitWidget(Widget):
         self.attack_cooldown = 0
         self.size = (40, 40)
         self.size_hint = (None, None)
-        with self.canvas:
-            Color(*self.unit_color)
-            self.rect = Rectangle(pos=self.pos, size=self.size)
-        self.bind(pos=self._update_rect)
+        # Убираем отрисовку из __init__ и полностью полагаемся на update_graphics
+        self.bind(pos=self.update_graphics, size=self.update_graphics)
         self.update_graphics()  # Первоначальная отрисовка HP
 
-    def _update_rect(self, i, value):
-        self.rect.pos = value
-        self.update_graphics()  # Обновляем HP бар при движении
+    # def _update_rect(self, i, value):
+    #     self.rect.pos = value
+    #     self.update_graphics()  # Обновляем HP бар при движении
 
     def update_graphics(self, *args):
         self.canvas.after.clear()
@@ -211,28 +211,30 @@ class CardWidget(BoxLayout):
         self.padding = 5
         self.size_hint = (None, None)
         self.size = (90, 120)
-        with self.canvas.before:
-            Color(*CARD_COLOR)
-            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
-
-        with self.canvas.after:
-            self.disabled_color = Color(0, 0, 0, 0)
-            self.disabled_rect = Rectangle(pos=self.pos, size=self.size)
-
+        # Убираем отрисовку из __init__ и полностью полагаемся на update_graphics
         self.bind(pos=self.update_graphics, size=self.update_graphics)
         stats = UNIT_DATA[unit_name]
         self.add_widget(Label(text=unit_name, font_size='18sp'))
         self.add_widget(Label(text=f"HP: {stats['hp']}", font_size='14sp'))
+        self.update_graphics() # Первый вызов для инициализации
 
     def update_graphics(self, *args):
-        self.bg_rect.pos = self.pos
-        self.bg_rect.size = self.size
-        self.disabled_rect.pos = self.pos
-        self.disabled_rect.size = self.size
+        self.canvas.before.clear()
+        with self.canvas.before:
+            Color(*CARD_COLOR)
+            Rectangle(pos=self.pos, size=self.size)
+        
+        # Очищаем и перерисовываем оверлей отключения
+        self.canvas.after.clear()
+        if self.disabled:
+            with self.canvas.after:
+                Color(0, 0, 0, 0.5) # Черный, полупрозрачный
+                Rectangle(pos=self.pos, size=self.size)
 
     def set_disabled(self, is_disabled):
         self.disabled = is_disabled
-        self.disabled_color.a = 0.5 if is_disabled else 0
+        # Просто вызываем перерисовку, чтобы показать или скрыть оверлей
+        self.update_graphics()
 
 
 # --- Экраны ---
@@ -400,12 +402,8 @@ class GameScreen(Screen):
         unit_name = data['unit']
         original_pos = data['pos']
 
-        app = App.get_running_app()
-        if app.player_role == 'host':
-            spawn_pos = (original_pos[0], self.game_area.height - original_pos[1])
-        else:
-            spawn_pos = (original_pos[0], self.game_area.height - original_pos[1])
-
+        # Противник всегда появляется на "перевернутой" по вертикали позиции
+        spawn_pos = (original_pos[0], self.game_area.height - original_pos[1])
         unit = UnitWidget(unit_name, owner='opponent', center=spawn_pos)
         self.units.append(unit)
         self.game_area.add_widget(unit)
@@ -487,37 +485,6 @@ class GameScreen(Screen):
         self.popup.dismiss()
         self.manager.current = 'game_mode'
 
-    def on_touch_up(self, touch):
-        if touch.grab_current is self:
-            touch.ungrab(self)
-            self.remove_widget(self.ghost_unit)
-
-            played_card = self.selected_card
-
-            local_pos = self.game_area.to_local(*touch.pos)
-            app = App.get_running_app()
-
-            can_spawn = local_pos[1] < self.game_area.height / 2
-
-            if self.game_area.collide_point(*local_pos) and can_spawn:
-                unit = UnitWidget(played_card.unit_name, owner='player', center=local_pos)
-                self.units.append(unit)
-                self.game_area.add_widget(unit)
-
-                played_card.set_disabled(True)
-                Clock.schedule_once(lambda dt: played_card.set_disabled(False), 5.0)
-
-                if app.network:
-                    pos_to_send = local_pos
-                    if app.player_role == 'client':
-                        pos_to_send = (local_pos[0], self.game_area.height - local_pos[1])
-                    app.network.send({'action': 'spawn', 'unit': unit.unit_name, 'pos': pos_to_send})
-
-            self.selected_card = None
-            self.ghost_unit = None
-            return True
-        return super().on_touch_up(touch)
-
     def update_layout(self, li, size):
         li.canvas.before.clear()
         with li.canvas.before:
@@ -541,26 +508,33 @@ class GameScreen(Screen):
 
     def update_tower_positions(self, s):
         w, h = s
-        T, P, K, B, M, S = 60, 100, 120, 20, 20, 40
+        # Заменяем "магические числа" на именованные константы для ясности
+        TOWER_WIDTH = 60
+        PRINCESS_TOWER_HEIGHT = 100
+        KING_TOWER_HEIGHT = 120
+        BOTTOM_MARGIN = 20
+        TOP_MARGIN = 20
+        SIDE_MARGIN = 40
+
         for t in self.towers:
             if t.tower_name == 'enemy_king':
-                t.size = (T, K) # size = (60, 120)
-                t.pos = (w / 2 - T / 2, h - K - M) # pos = (center_x, top - 120 - 20)
+                t.size = (TOWER_WIDTH, KING_TOWER_HEIGHT)
+                t.pos = (w / 2 - t.width / 2, h - t.height - TOP_MARGIN)
             elif t.tower_name == 'enemy_left':
-                t.size = (T, P) # size = (60, 100)
-                t.pos = (S, h - P - M - 80) # pos = (40, top - 100 - 20 - 80)
+                t.size = (TOWER_WIDTH, PRINCESS_TOWER_HEIGHT)
+                t.pos = (SIDE_MARGIN, h - t.height - TOP_MARGIN - 80)
             elif t.tower_name == 'enemy_right':
-                t.size = (T, P) # size = (60, 100)
-                t.pos = (w - T - S, h - P - M - 80) # pos = (width - 60 - 40, top - 100 - 20 - 80)
+                t.size = (TOWER_WIDTH, PRINCESS_TOWER_HEIGHT)
+                t.pos = (w - t.width - SIDE_MARGIN, h - t.height - TOP_MARGIN - 80)
             elif t.tower_name == 'player_king':
-                t.size = (T, K) # size = (60, 120)
-                t.pos = (w / 2 - T / 2, B) # pos = (center_x, 20)
+                t.size = (TOWER_WIDTH, KING_TOWER_HEIGHT)
+                t.pos = (w / 2 - t.width / 2, BOTTOM_MARGIN)
             elif t.tower_name == 'player_left':
-                t.size = (T, P) # size = (60, 100)
-                t.pos = (S, B + 80) # pos = (40, 20 + 80)
+                t.size = (TOWER_WIDTH, PRINCESS_TOWER_HEIGHT)
+                t.pos = (SIDE_MARGIN, BOTTOM_MARGIN + 80)
             elif t.tower_name == 'player_right':
-                t.size = (T, P) # size = (60, 100)
-                t.pos = (w - T - S, B + 80) # pos = (width - 60 - 40, 20 + 80)
+                t.size = (TOWER_WIDTH, PRINCESS_TOWER_HEIGHT)
+                t.pos = (w - t.width - SIDE_MARGIN, BOTTOM_MARGIN + 80)
 
     def create_ui(self):
         with self.ui_area.canvas.before:
@@ -582,27 +556,63 @@ class GameScreen(Screen):
         self.ui_bg.size = i.size
 
     def on_touch_down(self, touch):
-        if self.game_over:
-            return True
-        if self.selected_card:
+        # Если игра окончена или уже выбрана карта, ничего не делаем
+        if self.game_over or self.selected_card:
             return super().on_touch_down(touch)
 
-        for card in self.hand_cards:
-            if card.collide_point(*touch.pos) and not card.disabled:
-                self.selected_card = card
-                self.ghost_unit = Label(text=card.unit_name, size_hint=(None, None), size=(40, 40))
-                self.ghost_unit.center = touch.pos
-                self.add_widget(self.ghost_unit)
-                touch.grab(self)
-                return True
+        # Проверяем, было ли нажатие на одну из карт в руке
+        if self.ui_area.collide_point(*touch.pos):
+            for card in self.hand_cards:
+                if card.collide_point(*touch.pos) and not card.disabled:
+                    self.selected_card = card
+                    # Создаем "призрака" юнита для перетаскивания
+                    self.ghost_unit = Label(text=card.unit_name, size_hint=(None, None), size=(40, 40))
+                    self.ghost_unit.center = touch.pos
+                    self.add_widget(self.ghost_unit)
+                    # "Захватываем" событие, чтобы on_touch_move и on_touch_up вызывались для этого виджета
+                    touch.grab(self)
+                    return True # Мы обработали это событие
+
+        # Если нажатие было не на карту, передаем его дальше (например, кнопкам в popup)
         return super().on_touch_down(touch)
 
     def on_touch_move(self, touch):
+        # Если событие "захвачено" (т.е. мы тащим карту), перемещаем "призрака"
         if touch.grab_current is self:
             self.ghost_unit.center = touch.pos
-            return True
+            return True # Мы обработали это событие
         return super().on_touch_move(touch)
 
+    def on_touch_up(self, touch):
+        # Если мы отпускаем "захваченную" карту
+        if touch.grab_current is self:
+            # Освобождаем "захват" и убираем "призрака"
+            touch.ungrab(self)
+            self.remove_widget(self.ghost_unit)
+            self.ghost_unit = None
+
+            played_card = self.selected_card
+            self.selected_card = None
+
+            # Конвертируем глобальные координаты касания в локальные для игровой зоны
+            local_pos = self.game_area.to_local(*touch.pos)
+            can_spawn = local_pos[1] < self.game_area.height / 2
+
+            # Если отпустили в своей зоне, спавним юнита
+            if self.game_area.collide_point(*local_pos) and can_spawn:
+                unit = UnitWidget(played_card.unit_name, owner='player', center=local_pos)
+                self.units.append(unit)
+                self.game_area.add_widget(unit)
+
+                played_card.set_disabled(True)
+                Clock.schedule_once(lambda dt: played_card.set_disabled(False), 5.0)
+
+                app = App.get_running_app()
+                if app.network:
+                    pos_to_send = (local_pos[0], self.game_area.height - local_pos[1])
+                    app.network.send({'action': 'spawn', 'unit': unit.unit_name, 'pos': pos_to_send})
+            return True # Мы обработали это событие
+        return super().on_touch_up(touch)
 
 class ClashApp(App):
     network = ObjectProperty(None)
@@ -616,7 +626,3 @@ class ClashApp(App):
         sm.add_widget(WaitingScreen(name='waiting'))
         sm.add_widget(GameScreen(name='game'))
         return sm
-
-
-if __name__ == '__main__':
-    ClashApp().run()
