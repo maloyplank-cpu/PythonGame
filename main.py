@@ -345,9 +345,12 @@ class GameScreen(Screen):
         super().__init__(**kwargs)
         self.game_area = FloatLayout()
         self.ui_area = BoxLayout(size_hint_y=None, height=150, padding=10, spacing=10)
+        # Создаем корневой BoxLayout, который будет занимать весь экран
         root_layout = BoxLayout(orientation='vertical')
-        root_layout.add_widget(self.ui_area)
+        # Сначала добавляем игровое поле (оно займет все доступное место)
         root_layout.add_widget(self.game_area)
+        # Затем добавляем UI внизу
+        root_layout.add_widget(self.ui_area)
         self.add_widget(root_layout)
         self.towers = []
         self.units = []
@@ -541,23 +544,23 @@ class GameScreen(Screen):
         T, P, K, B, M, S = 60, 100, 120, 20, 20, 40
         for t in self.towers:
             if t.tower_name == 'enemy_king':
-                t.size = (T, K)
-                t.pos = (w / 2 - T / 2, h - K - M)
+                t.size = (T, K) # size = (60, 120)
+                t.pos = (w / 2 - T / 2, h - K - M) # pos = (center_x, top - 120 - 20)
             elif t.tower_name == 'enemy_left':
-                t.size = (T, P)
-                t.pos = (S, h - P - M - 80)
+                t.size = (T, P) # size = (60, 100)
+                t.pos = (S, h - P - M - 80) # pos = (40, top - 100 - 20 - 80)
             elif t.tower_name == 'enemy_right':
-                t.size = (T, P)
-                t.pos = (w - T - S, h - P - M - 80)
+                t.size = (T, P) # size = (60, 100)
+                t.pos = (w - T - S, h - P - M - 80) # pos = (width - 60 - 40, top - 100 - 20 - 80)
             elif t.tower_name == 'player_king':
-                t.size = (T, K)
-                t.pos = (w / 2 - T / 2, B)
+                t.size = (T, K) # size = (60, 120)
+                t.pos = (w / 2 - T / 2, B) # pos = (center_x, 20)
             elif t.tower_name == 'player_left':
-                t.size = (T, P)
-                t.pos = (S, B + 80)
+                t.size = (T, P) # size = (60, 100)
+                t.pos = (S, B + 80) # pos = (40, 20 + 80)
             elif t.tower_name == 'player_right':
-                t.size = (T, P)
-                t.pos = (w - T - S, B + 80)
+                t.size = (T, P) # size = (60, 100)
+                t.pos = (w - T - S, B + 80) # pos = (width - 60 - 40, 20 + 80)
 
     def create_ui(self):
         with self.ui_area.canvas.before:
