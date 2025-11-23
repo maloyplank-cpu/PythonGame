@@ -115,6 +115,7 @@ class TowerWidget(Widget):
             self.hp_bar = Rectangle(size=(0, 10))
 
         self.bind(pos=self.update_graphics, size=self.update_graphics)
+        self.update_graphics() # Первый вызов для инициализации
     def update_graphics(self, *args):
         # Обновляем существующие инструкции
         self.rect.pos = self.pos
@@ -228,6 +229,7 @@ class CardWidget(BoxLayout):
         stats = UNIT_DATA[unit_name]
         self.add_widget(Label(text=unit_name, font_size='18sp'))
         self.add_widget(Label(text=f"HP: {stats['hp']}", font_size='14sp'))
+        self.bind(pos=self.update_graphics, size=self.update_graphics)
         self.update_graphics() # Первый вызов для инициализации
 
     def update_graphics(self, *args):
@@ -235,6 +237,8 @@ class CardWidget(BoxLayout):
         self.bg_rect.size = self.size
 
 
+        self.bg_rect.pos = self.pos
+        self.disabled_rect.pos = self.pos
     def set_disabled(self, is_disabled):
         self.disabled = is_disabled
         # Просто меняем прозрачность оверлея
