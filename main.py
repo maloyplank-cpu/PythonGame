@@ -106,16 +106,15 @@ class TowerWidget(Widget):
         self.max_hp = max_hp
         self.hp = max_hp
         self.tower_color = tower_color
-        # Создаем инструкции один раз и сохраняем ссылки
+
         with self.canvas:
             self.color_instruction = Color(*self.tower_color)
             self.rect = Rectangle()
         with self.canvas.after:
             self.hp_bar_bg = Rectangle(size=(self.width, 10))
             self.hp_bar = Rectangle(size=(0, 10))
-        self.bind(pos=self.update_graphics, size=self.update_graphics)
-        self.update_graphics() # Первый вызов для инициализации
 
+        self.bind(pos=self.update_graphics, size=self.update_graphics)
     def update_graphics(self, *args):
         # Обновляем существующие инструкции
         self.rect.pos = self.pos
@@ -126,6 +125,7 @@ class TowerWidget(Widget):
         current_hp_width = (self.hp / self.max_hp) * self.width if self.hp > 0 else 0
         self.hp_bar.pos = (self.x, hp_bar_y)
         self.hp_bar.size = (current_hp_width, 10)
+
 
 
 class UnitWidget(Widget):
@@ -164,6 +164,7 @@ class UnitWidget(Widget):
         current_hp_width = (self.hp / self.max_hp) * self.width if self.hp > 0 else 0
         self.hp_bar.pos = (self.x, hp_bar_y)
         self.hp_bar.size = (current_hp_width, 8)
+
 
     def find_target(self, enemy_units, enemy_towers):
         self.target = None
@@ -219,12 +220,11 @@ class CardWidget(BoxLayout):
         self.size = (90, 120)
         # Создаем инструкции один раз и сохраняем ссылки
         with self.canvas.before:
-            self.bg_color = Color(*CARD_COLOR)
+            Color(*CARD_COLOR)
             self.bg_rect = Rectangle()
         with self.canvas.after:
-            self.disabled_color = Color(0, 0, 0, 0)
+            self.disabled_color = Color(0, 0, 0, 0) # Initial alpha = 0
             self.disabled_rect = Rectangle()
-        self.bind(pos=self.update_graphics, size=self.update_graphics)
         stats = UNIT_DATA[unit_name]
         self.add_widget(Label(text=unit_name, font_size='18sp'))
         self.add_widget(Label(text=f"HP: {stats['hp']}", font_size='14sp'))
@@ -232,10 +232,8 @@ class CardWidget(BoxLayout):
 
     def update_graphics(self, *args):
         # Обновляем существующие инструкции
-        self.bg_rect.pos = self.pos
         self.bg_rect.size = self.size
-        self.disabled_rect.pos = self.pos
-        self.disabled_rect.size = self.size
+
 
     def set_disabled(self, is_disabled):
         self.disabled = is_disabled
@@ -286,6 +284,7 @@ class GameModeScreen(Screen):
         app = App.get_running_app()
         app.network = Network()
         host_ip = app.network.start_server()
+        app.player_role = 'host'
         if host_ip:
             app.player_role = 'host'
             self.manager.get_screen('waiting').set_ip(host_ip)
