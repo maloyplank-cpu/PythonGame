@@ -106,26 +106,26 @@ class TowerWidget(Widget):
         self.max_hp = max_hp
         self.hp = max_hp
         self.tower_color = tower_color
-        # Убираем отрисовку из __init__ и полностью полагаемся на update_graphics
+        # Создаем инструкции один раз и сохраняем ссылки
+        with self.canvas:
+            self.color_instruction = Color(*self.tower_color)
+            self.rect = Rectangle()
+        with self.canvas.after:
+            self.hp_bar_bg = Rectangle(size=(self.width, 10))
+            self.hp_bar = Rectangle(size=(0, 10))
         self.bind(pos=self.update_graphics, size=self.update_graphics)
         self.update_graphics() # Первый вызов для инициализации
 
     def update_graphics(self, *args):
-        # Точечно очищаем и перерисовываем основной холст
-        self.canvas.clear()
-        with self.canvas:
-            Color(*self.tower_color)
-            Rectangle(pos=self.pos, size=self.size)
-        # Точечно очищаем и перерисовываем холст "after" для HP бара
-        self.canvas.after.clear()
-        with self.canvas.after:
-            hp_bar_y = self.top + 5
-            Color(*HP_BAR_BG)
-            Rectangle(pos=(self.x, hp_bar_y), size=(self.width, 10))
-            if self.hp > 0:
-                current_hp_width = (self.hp / self.max_hp) * self.width
-                Color(*HP_BAR_GREEN)
-                Rectangle(pos=(self.x, hp_bar_y), size=(current_hp_width, 10))
+        # Обновляем существующие инструкции
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+        hp_bar_y = self.top + 5
+        self.hp_bar_bg.pos = (self.x, hp_bar_y)
+        self.hp_bar_bg.size = (self.width, 10)
+        current_hp_width = (self.hp / self.max_hp) * self.width if self.hp > 0 else 0
+        self.hp_bar.pos = (self.x, hp_bar_y)
+        self.hp_bar.size = (current_hp_width, 10)
 
 
 class UnitWidget(Widget):
@@ -144,26 +144,26 @@ class UnitWidget(Widget):
         self.attack_cooldown = 0
         self.size = (40, 40)
         self.size_hint = (None, None)
-        # Убираем отрисовку из __init__ и полностью полагаемся на update_graphics
+        # Создаем инструкции один раз и сохраняем ссылки
+        with self.canvas:
+            self.color_instruction = Color(*self.unit_color)
+            self.rect = Rectangle()
+        with self.canvas.after:
+            self.hp_bar_bg = Rectangle(size=(self.width, 8))
+            self.hp_bar = Rectangle(size=(0, 8))
         self.bind(pos=self.update_graphics, size=self.update_graphics)
         self.update_graphics()  # Первоначальная отрисовка HP
 
     def update_graphics(self, *args):
-        # Точечно очищаем и перерисовываем основной холст
-        self.canvas.clear()
-        with self.canvas:
-            Color(*self.unit_color)
-            Rectangle(pos=self.pos, size=self.size)
-        # Точечно очищаем и перерисовываем холст "after" для HP бара
-        self.canvas.after.clear()
-        with self.canvas.after:
-            hp_bar_y = self.top + 5
-            Color(*HP_BAR_BG)
-            Rectangle(pos=(self.x, hp_bar_y), size=(self.width, 8))
-            if self.hp > 0:
-                current_hp_width = (self.hp / self.max_hp) * self.width
-                Color(*HP_BAR_GREEN)
-                Rectangle(pos=(self.x, hp_bar_y), size=(current_hp_width, 8))
+        # Обновляем существующие инструкции
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+        hp_bar_y = self.top + 5
+        self.hp_bar_bg.pos = (self.x, hp_bar_y)
+        self.hp_bar_bg.size = (self.width, 8)
+        current_hp_width = (self.hp / self.max_hp) * self.width if self.hp > 0 else 0
+        self.hp_bar.pos = (self.x, hp_bar_y)
+        self.hp_bar.size = (current_hp_width, 8)
 
     def find_target(self, enemy_units, enemy_towers):
         self.target = None
@@ -217,7 +217,13 @@ class CardWidget(BoxLayout):
         self.padding = 5
         self.size_hint = (None, None)
         self.size = (90, 120)
-        # Убираем отрисовку из __init__ и полностью полагаемся на update_graphics
+        # Создаем инструкции один раз и сохраняем ссылки
+        with self.canvas.before:
+            self.bg_color = Color(*CARD_COLOR)
+            self.bg_rect = Rectangle()
+        with self.canvas.after:
+            self.disabled_color = Color(0, 0, 0, 0)
+            self.disabled_rect = Rectangle()
         self.bind(pos=self.update_graphics, size=self.update_graphics)
         stats = UNIT_DATA[unit_name]
         self.add_widget(Label(text=unit_name, font_size='18sp'))
@@ -225,22 +231,16 @@ class CardWidget(BoxLayout):
         self.update_graphics() # Первый вызов для инициализации
 
     def update_graphics(self, *args):
-        self.canvas.before.clear()
-        with self.canvas.before:
-            Color(*CARD_COLOR)
-            Rectangle(pos=self.pos, size=self.size)
-        
-        # Очищаем и перерисовываем оверлей отключения
-        self.canvas.after.clear()
-        if self.disabled:
-            with self.canvas.after:
-                Color(0, 0, 0, 0.5) # Черный, полупрозрачный
-                Rectangle(pos=self.pos, size=self.size)
+        # Обновляем существующие инструкции
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
+        self.disabled_rect.pos = self.pos
+        self.disabled_rect.size = self.size
 
     def set_disabled(self, is_disabled):
         self.disabled = is_disabled
-        # Просто вызываем перерисовку, чтобы показать или скрыть оверлей
-        self.update_graphics()
+        # Просто меняем прозрачность оверлея
+        self.disabled_color.a = 0.5 if is_disabled else 0
 
 
 # --- Экраны ---
