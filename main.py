@@ -144,11 +144,11 @@ class UnitWidget(Widget):
         self.bind(pos=self.update_graphics, size=self.update_graphics)
         self.update_graphics()  # Первоначальная отрисовка HP
 
-    # def _update_rect(self, i, value):
-    #     self.rect.pos = value
-    #     self.update_graphics()  # Обновляем HP бар при движении
-
     def update_graphics(self, *args):
+        self.canvas.clear()
+        with self.canvas:
+            Color(*self.unit_color)
+            Rectangle(pos=self.pos, size=self.size)
         self.canvas.after.clear()
         with self.canvas.after:
             hp_bar_y = self.top + 5
@@ -468,6 +468,17 @@ class GameScreen(Screen):
         self.game_area.add_widget(unit)
         print(f"[BOT] Spawned {unit_name}")
 
+    def update_layout(self, li, size):
+        li.canvas.before.clear()
+        with li.canvas.before:
+            Color(*GREEN)
+            Rectangle(pos=(0, 0), size=size)
+            Color(*GRAY)
+            Line(points=[0, size[1] / 2, size[0], size[1] / 2], width=5)
+        if not self.towers:
+            self.create_towers()
+        self.update_tower_positions(size)
+
     def end_game(self, message):
         if self.game_over:
             return
@@ -484,17 +495,6 @@ class GameScreen(Screen):
     def go_to_menu(self, instance):
         self.popup.dismiss()
         self.manager.current = 'game_mode'
-
-    def update_layout(self, li, size):
-        li.canvas.before.clear()
-        with li.canvas.before:
-            Color(*GREEN)
-            Rectangle(pos=(0, 0), size=size)
-            Color(*GRAY)
-            Line(points=[0, size[1] / 2, size[0], size[1] / 2], width=5)
-        if not self.towers:
-            self.create_towers()
-        self.update_tower_positions(size)
 
     def create_towers(self):
         defs = [{'name': 'enemy_king', 'hp': 2000, 'color': RED}, {'name': 'enemy_left', 'hp': 1000, 'color': RED},
@@ -626,3 +626,6 @@ class ClashApp(App):
         sm.add_widget(WaitingScreen(name='waiting'))
         sm.add_widget(GameScreen(name='game'))
         return sm
+
+if __name__ == '__main__':
+    ClashApp().run()
